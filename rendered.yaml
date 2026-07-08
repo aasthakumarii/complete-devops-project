@@ -1,0 +1,248 @@
+---
+# Source: three-tier-app/templates/postgres-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+
+metadata:
+  name: postgres-pvc
+
+spec:
+
+  accessModes:
+
+  - ReadWriteOnce
+
+  resources:
+
+    requests:
+
+      storage: 5Gi
+---
+# Source: three-tier-app/templates/backend-service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: backend-service
+
+spec:
+
+  selector:
+    app: backend
+
+  ports:
+
+  - port: 3000
+
+    targetPort: 3000
+
+  type: ClusterIP
+---
+# Source: three-tier-app/templates/frontend-service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: frontend-service
+
+spec:
+
+  selector:
+    app: frontend
+
+  ports:
+
+  - port: 80
+
+    targetPort: 80
+
+  type: ClusterIP
+---
+# Source: three-tier-app/templates/postgres-service.yaml
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: postgres-service
+
+spec:
+
+  selector:
+    app: postgres
+
+  ports:
+
+  - port: 5432
+
+    targetPort: 5432
+---
+# Source: three-tier-app/templates/backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: backend
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      containers:
+
+      - name: backend
+
+        image: "aasthakumarii/3tier-backend:latest"
+
+        imagePullPolicy: IfNotPresent
+
+        ports:
+
+        - containerPort: 3000
+
+        env:
+
+        - name: DB_HOST
+          value: postgres-service
+
+        - name: DB_PORT
+          value: "5432"
+
+        - name: DB_NAME
+          value: "authdb"
+
+        - name: DB_USER
+          value: "postgres"
+
+        - name: DB_PASSWORD
+          value: "postgres"
+---
+# Source: three-tier-app/templates/frontend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: frontend
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: frontend
+
+  template:
+    metadata:
+      labels:
+        app: frontend
+
+    spec:
+      containers:
+
+      - name: frontend
+
+        image: "aasthakumarii/3tier-frontend:latest"
+
+        imagePullPolicy: IfNotPresent
+
+        ports:
+
+        - containerPort: 80
+---
+# Source: three-tier-app/templates/postgres-statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: postgres
+
+spec:
+
+  serviceName: postgres-service
+
+  replicas: 1
+
+  selector:
+
+    matchLabels:
+
+      app: postgres
+
+  template:
+
+    metadata:
+
+      labels:
+
+        app: postgres
+
+    spec:
+
+      containers:
+
+      - name: postgres
+
+        image: "postgres:16"
+
+        ports:
+
+        - containerPort: 5432
+
+        envFrom:
+
+        - secretRef:
+
+            name: postgres-secret
+
+        volumeMounts:
+
+        - name: postgres-storage
+
+          mountPath: /var/lib/postgresql/data
+
+  volumeClaimTemplates:
+
+  - metadata:
+
+      name: postgres-storage
+
+    spec:
+
+      accessModes:
+
+      - ReadWriteOnce
+
+      resources:
+
+        requests:
+
+          storage: 5Gi
+---
+# Source: three-tier-app/templates/postgres-secret.yaml
+postgres:
+
+  image:
+    repository: postgres
+    tag: "16"
+
+  database: authdb
+
+  username: postgres
+
+  password: postgres
+
+  service:
+    port: 5432
+
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
