@@ -29,6 +29,13 @@ spec:
 
         - containerPort: {{ .Values.backend.service.targetPort }}
 
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
         env:
 
         - name: DB_HOST
@@ -45,3 +52,5 @@ spec:
 
         - name: DB_PASSWORD
           value: {{ .Values.postgres.password | quote }}
+
+        
