@@ -17,7 +17,7 @@ frontend:
 
 # Backend
 backend:
-  replicaCount: 3
+  replicaCount: 2
 
   image:
     repository: aasthakumarii/3tier-backend
